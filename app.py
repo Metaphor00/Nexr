@@ -6,7 +6,9 @@ from flask_cors import CORS
 
 
 app = Flask(__name__, static_folder='static')
-app.config['UPLOAD_FOLDER'] = 'static/3d_models/'  # Save models in static directory
+app.config['UPLOAD_FOLDER'] = os.path.join('static', '3d_models')
+
+#app.config['UPLOAD_FOLDER'] = 'static/3d_models/'  # Save models in static directory
 app.config['ALLOWED_EXTENSIONS'] = {'glb'}
 CORS(app)
 # Check if file extension is allowed
