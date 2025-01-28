@@ -1,46 +1,47 @@
-from flask import Flask, request, send_from_directory, render_template
+from flask import Flask, render_template, request, redirect, url_for
 import os
 import qrcode
+from werkzeug.utils import secure_filename
+from flask_cors import CORS
 
-app = Flask(__name__)
-UPLOAD_FOLDER = 'uploads'
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-os.makedirs("static", exist_ok=True)
 
-@app.route("/", methods=["GET", "POST"])
-def upload_file():
-    if request.method == "POST":
-        file = request.files["file"]
-        if file and file.filename.endswith(".glb"):
-            file_path = os.path.join(UPLOAD_FOLDER, file.filename)
-            file.save(file_path)
+app = Flask(__name__, static_folder='static')
+app.config['UPLOAD_FOLDER'] = 'static/3d_models/'  # Save models in static directory
+app.config['ALLOWED_EXTENSIONS'] = {'glb'}
+CORS(app)
+# Check if file extension is allowed
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in app.config['ALLOWED_EXTENSIONS']
 
-            # Use the local IP address instead of localhost
-            ip_address = request.host.split(':')[0]
-            viewer_url = f"http://{ip_address}:5000/view/{file.filename}"
-
-            # Generate QR Code pointing directly to the 3D viewer
+# Route to upload 3D model
+@app.route('/', methods=['GET', 'POST'])
+def index():
+    if request.method == 'POST':
+        if 'file' not in request.files:
+            return redirect(request.url)
+        file = request.files['file']
+        if file and allowed_file(file.filename):
+            filename = secure_filename(file.filename)
+            filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            file.save(filepath)
+            # Generate QR code
+            viewer_url = request.url_root + f"view-model/{filename}"
             qr = qrcode.make(viewer_url)
-            qr_path = os.path.join("static", "qr_code.png")
+            qr_path = os.path.join(app.config['UPLOAD_FOLDER'], "qrcode.png")
             qr.save(qr_path)
+            return render_template('index.html', qr_code_path="static/3d_models/qrcode.png")
+    return render_template('index.html')
 
-            return render_template("index.html", qr_code=qr_path, viewer_url=viewer_url)
-    return render_template("index.html")
-
-
-@app.route("/view/<filename>")
-def view_3d_model(filename):
-    file_url = f"{request.host_url}uploads/{filename}"
-    return render_template("view_3d.html", file_url=file_url)
+@app.route('/static/js/<path:filename>')
+def serve_js(filename):
+    return app.send_static_file(f'js/{filename}')
 
 
-@app.route("/uploads/<path:filename>")
-def serve_file(filename):
-    # Serve GLB files with the correct MIME type
-    if filename.endswith(".glb"):
-        return send_from_directory(UPLOAD_FOLDER, filename, mimetype="model/gltf-binary")
-    return send_from_directory(UPLOAD_FOLDER, filename)
+# Route to view 3D model
+@app.route('/view-model/<filename>')
+def view_model(filename):
+    return render_template('viewer.html', model_file=f"static/3d_models/{filename}")
+   
 
-
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)
+if __name__ == '__main__':
+    app.run(debug=True, host='0.0.0.0')
