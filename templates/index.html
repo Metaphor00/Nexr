@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GLB to QR Code Converter</title>
+    <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; padding: 20px; }
+        #qr-code { margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <h1>Upload GLB File & Get QR Code</h1>
+    <form method="POST" enctype="multipart/form-data">
+        <input type="file" name="file" accept=".glb" required>
+        <button type="submit">Generate QR Code</button>
+    </form>
+
+    <div id="qr-code">
+        {% if qr_code %}
+        <h2>Scan to View 3D Model:</h2>
+        <img src="{{ qr_code }}" alt="QR Code">
+        <model-viewer src="{{ file_url }}" alt="3D Model Viewer" auto-rotate camera-controls style="width: 100%; max-width: 500px;"></model-viewer>
+        {% endif %}
+    </div>
+</body>
+</html>
